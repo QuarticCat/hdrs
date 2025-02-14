@@ -452,6 +452,28 @@ impl Client {
 
         Ok(())
     }
+
+    /// Check if a given path exists on the filesystem.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use hdrs::{Client, ClientBuilder};
+    ///
+    /// let fs = ClientBuilder::new("default")
+    ///     .with_user("default")
+    ///     .connect()
+    ///     .expect("client connect succeed");
+    /// let _ = fs.exists("/tmp");
+    /// ```
+    pub fn exists(&self, path: &str) -> io::Result<bool> {
+        let n = unsafe {
+            let p = CString::new(path)?;
+            hdfsExists(self.fs, p.as_ptr())
+        };
+
+        Ok(n == 0)
+    }
 }
 
 #[cfg(test)]
@@ -526,5 +548,18 @@ mod tests {
 
         fs.create_dir("/tmp")
             .expect("mkdir on exist dir should succeed");
+    }
+
+    #[test]
+    fn test_client_exists() {
+        let _ = env_logger::try_init();
+
+        let fs = ClientBuilder::new("default")
+            .connect()
+            .expect("init success");
+        debug!("Client: {:?}", fs);
+
+        assert!(fs.exists("/tmp").expect("exists success"));
+        assert!(!fs.exists("/qc").expect("exists success"));
     }
 }
